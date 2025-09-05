@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visit Taniti – Low-Fi Prototype (Hero Image)</title>
+<style>
+  :root { --bg:#f7f7fb; --border:#e5e7eb; --text:#111; --muted:#555; --brand:#2563eb; }
+  * { box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--text); }
+  header { position:sticky; top:0; background:rgba(255,255,255,.9); backdrop-filter:saturate(1.2) blur(8px); border-bottom:1px solid var(--border); }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .brand { font-weight:700; }
+  .btn { display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; text-decoration:none; color:var(--text); }
+  .btn.primary { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .grid { display:grid; gap:16px; }
+  @media (min-width: 800px) { .grid.cols-3 { grid-template-columns: repeat(3, 1fr); } .grid.cols-2 { grid-template-columns: repeat(2, 1fr); } }
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; }
+  nav button { margin-right:8px; border-radius:999px; padding:8px 12px; border:1px solid var(--border); background:#fff; }
+  nav button.active { background:#eef2ff; color:#3730a3; }
+  footer { border-top:1px solid var(--border); background:#fff; color:#666; font-size:12px; }
+  .hidden { display:none; }
+  .chips button { margin-right:8px; margin-bottom:8px; }
+  .drawer { position:fixed; right:16px; bottom:16px; }
+  .itinerary { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,.08); }
+  .itinerary summary { list-style:none; padding:10px 14px; cursor:pointer; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .dialog { background:#fff; border-radius:16px; border:1px solid var(--border); width:100%; max-width:520px; padding:16px; }
+  input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); }
+  .notice { background:#fef9c3; border:1px solid #fde68a; border-radius:12px; padding:12px; }
+  .hero { border:1px solid var(--border); border-radius:18px; padding:16px; background:#fff; }
+  .hero-img { width:100%; max-height:320px; object-fit:cover; border-radius:14px; display:block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+    <div class="brand">Visit <span style="color:var(--brand)">Taniti</span></div>
+    <nav id="nav"></nav>
+  </div>
+</header>
+
+<main class="wrap" id="content" style="padding-top:16px;"></main>
+
+<div class="drawer">
+  <details class="itinerary">
+    <summary>Itinerary (<span id="itCount">0</span>)</summary>
+    <div style="padding:10px 14px; font-size:14px;" id="itList">No items saved yet.</div>
+    <div style="padding:0 14px 14px;">
+      <button class="btn primary" onclick="alert('Exported! (stub)')">Export Plan</button>
+    </div>
+  </details>
+</div>
+
+<footer>
+  <div class="wrap" style="padding:16px;">Low‑fi prototype for coursework. Replace copy with official Taniti content.</div>
+</footer>
+
+<script>
+const pages = ["Home","Activities","Stay","Eat & Drink","Getting Around","Plan & Book","Travel Info","About","Contact"];
+const activities = [
+  {id:1, name:"Snorkeling Reef Tour", duration:"3h", price:"$65+", tag:"Water"},
+  {id:2, name:"Volcano Sunrise Hike", duration:"4h", price:"$80+", tag:"Adventure"},
+  {id:3, name:"Cultural Village Walk", duration:"2h", price:"$30+", tag:"Culture"},
+  {id:4, name:"Lagoon Kayaking", duration:"2.5h", price:"$55+", tag:"Water"},
+];
+const hotels = [
+  {id:1, name:"Coral Bay Inn", price:"$160 / night", amenity:"Free breakfast"},
+  {id:2, name:"Lagoon View Bungalows", price:"$190 / night", amenity:"Beach access"},
+  {id:3, name:"Palm Court Hotel", price:"$135 / night", amenity:"Pool"},
+];
+
+let current = "Home";
+let itinerary = [];
+let activityFilter = "All";
+
+function setPage(p){ current = p; render(); }
+function addToItinerary(item){
+  if(!itinerary.find(x=>x.id===item.id)){ itinerary.push(item); }
+  document.getElementById('itCount').textContent = itinerary.length;
+  const list = document.getElementById('itList');
+  list.innerHTML = itinerary.map(i => `<div style='display:flex; justify-content:space-between; gap:8px; margin:6px 0'>
+    <div>${i.name}</div>
+    <button class='btn' onclick='removeFromItinerary(${i.id})'>Remove</button>
+  </div>`).join('') || 'No items saved yet.';
+}
+function removeFromItinerary(id){
+  itinerary = itinerary.filter(i=>i.id!==id);
+  document.getElementById('itCount').textContent = itinerary.length;
+  const list = document.getElementById('itList');
+  list.innerHTML = itinerary.map(i => `<div style='display:flex; justify-content:space-between; gap:8px; margin:6px 0'>
+    <div>${i.name}</div>
+    <button class='btn' onclick='removeFromItinerary(${i.id})'>Remove</button>
+  </div>`).join('') || 'No items saved yet.';
+}
+
+function nav(){
+  const el = document.getElementById('nav');
+  el.innerHTML = pages.map(p => `<button class='${current===p?'active':''}' onclick='setPage("${p}")'>${p}</button>`).join('');
+}
+
+function card(title, body, cta){
+  return `<div class='card'><div style='display:flex;justify-content:space-between;align-items:start;gap:8px'>
+    <div><div style='font-weight:600'>${title}</div></div>
+    ${cta||''}
+  </div><div style='font-size:14px;color:var(--muted);margin-top:6px'>${body}</div></div>`;
+}
+
+function homeView(){
+  return `<div class='hero'>
+    <img class='hero-img' src='resort.webp' alt='Taniti resort with palm trees and mountain backdrop'>
+    <div style='margin-top:12px'>
+      <div style='font-size:22px;font-weight:700'>Welcome to Taniti</div>
+      <div style='color:var(--muted);margin-top:6px'>Small Pacific island: beaches, rainforest, and an active volcano.</div>
+      <div style='display:flex;gap:8px;margin-top:12px;flex-wrap:wrap'>
+        <a class='btn primary' onclick='setPage("Activities")'>Explore Activities</a>
+        <a class='btn' onclick='setPage("Plan & Book")'>Start Planning</a>
+      </div>
+    </div>
+  </div>
+  <div class='grid cols-3' style='margin-top:16px'>
+    ${card("Activities","Snorkeling reefs, volcano hikes, cultural tours.", `<a class='btn' onclick='setPage("Activities")'>Browse</a>`)}
+    ${card("Stay","From hostel to a 4-star resort; many inspected family hotels & B&Bs.", `<a class='btn' onclick='setPage("Stay")'>Compare</a>`)}
+    ${card("Getting Around","Buses (5am–11pm), taxis, rental cars, and bikes (helmets required).", `<a class='btn' onclick='setPage("Getting Around")'>View</a>`)}
+  </div>`;
+}
+
+function activitiesView(){
+  const tags = ["All","Water","Adventure","Culture"];
+  const chipEls = tags.map(t => `<button class='${activityFilter===t?"active":""}' onclick='setFilter("${t}")'>${t}</button>`).join('');
+  const list = (activityFilter==="All" ? activities : activities.filter(a=>a.tag===activityFilter))
+    .map(a => `<div class='card' style='display:flex;justify-content:space-between;align-items:center'>
+        <div><div style='font-weight:600'>${a.name}</div><div style='font-size:14px;color:var(--muted)'>${a.duration} • ${a.price}</div></div>
+        <button class='btn primary' onclick='openActivity(${a.id})'>View</button>
+      </div>`).join('');
+  return `<h2 style='font-size:20px;font-weight:600'>Top Activities</h2>
+    <div class='chips'>${chipEls}</div>
+    <div class='grid cols-2'>${list}</div>`;
+}
+
+function setFilter(t){ activityFilter = t; render(); }
+
+function openActivity(id){
+  const a = activities.find(x=>x.id===id);
+  const modal = document.createElement('div');
+  modal.className='modal';
+  modal.innerHTML = `<div class='dialog'>
+    <div style='display:flex;justify-content:space-between;align-items:center'>
+      <div style='font-weight:600;font-size:18px'>${a.name}</div>
+      <button class='btn' onclick='this.closest(".modal").remove()'>Close</button>
+    </div>
+    <div style='font-size:14px;color:var(--muted);margin-top:6px'>${a.duration} • ${a.price}</div>
+    <label style='display:block;margin-top:10px;font-size:14px'>Date <input type='date'></label>
+    <label style='display:block;margin-top:10px;font-size:14px'>People <input type='number' min='1' value='2'></label>
+    <div style='display:flex;gap:8px;margin-top:12px'>
+      <button class='btn' onclick='addToItinerary(${JSON.stringify(a).replace(/"/g,"&quot;")})'>Save to Itinerary</button>
+      <a href='#' class='btn primary' onclick='alert("Booking on partner site (stub)")'>Book on Partner Site</a>
+    </div>
+    <div style='font-size:12px;color:#666;margin-top:6px'>You’ll complete payment securely with the tour operator.</div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function stayView(){
+  const list = hotels.map(h=>`<div class='card'>
+    <div style='font-weight:600'>${h.name}</div>
+    <div style='font-size:14px;color:var(--muted);margin-top:4px'>${h.price}</div>
+    <div style='font-size:14px;color:var(--muted)'>Amenity: ${h.amenity}</div>
+    <div style='margin-top:8px'><button class='btn primary'>View Rooms</button></div>
+  </div>`).join('');
+  return `<h2 style='font-size:20px;font-weight:600'>Places to Stay</h2><div class='grid cols-3'>${list}</div>`;
+}
+
+function eatView(){
+  return `<h2 style='font-size:20px;font-weight:600'>Eat & Drink</h2>
+    ${card("Restaurants & Groceries","10 restaurants (5 local fish & rice, 3 American-style, 2 Pan-Asian). Two supermarkets, two small groceries, and one 24-hour convenience store.")}
+    ${card("Nightlife","Pubs including a microbrewery and a new dance club.")}`;
+}
+
+function aroundView(){
+  return `<h2 style='font-size:20px;font-weight:600'>Getting Around Taniti</h2>
+    ${card("Airport","Small airport (jets/props). Expansion planned to handle larger jets in the next few years.")}
+    ${card("Buses","Public buses in Taniti City from 5 a.m. – 11 p.m. daily; private buses serve the rest of the island.")}
+    ${card("Taxis & Rentals","Taxis in Taniti City; rental cars near the airport; bikes & helmets available to rent (helmets required).")}
+    ${card("Walkability","Taniti City is flat and walkable; Merriton Landing and the bayfront are easy on foot.")}`;
+}
+
+function planView(){
+  return `<h2 style='font-size:20px;font-weight:600'>Plan & Book</h2>
+    <div class='grid cols-3'>
+      ${card("1) Pick Dates","Consider shoulder season for value.")}
+      ${card("2) Choose Stay","Filter by budget & amenities.")}
+      ${card("3) Add Activities","Reserve popular tours early (reef, volcano, rainforest).")}
+    </div>
+    <div class='notice' style='margin-top:12px'><b>Heads up:</b> Some bookings redirect to trusted partner sites. Your selections stay saved here.</div>`;
+}
+
+function infoView(){
+  return `<h2 style='font-size:20px;font-weight:600'>Travel Information</h2>
+    ${card("Power","120V outlets (same as U.S.).")}
+    ${card("Alcohol","No sales/service between midnight and 9:00 a.m.; drinking age 18 (lightly enforced).")}
+    ${card("Language & Health","Many younger residents speak English; hospital & clinics have multilingual staff.")}
+    ${card("Safety & Holidays","Violent crime is rare; watch for pickpocketing. Many national holidays—some closures.")}
+    ${card("Money","USD used; many businesses also accept euros and yen. Credit cards widely accepted.")}`;
+}
+
+function aboutView(){
+  return `<h2 style='font-size:20px;font-weight:600'>About Taniti</h2>
+    ${card("Geography","<b><500 sq mi</b> island with beaches, rainforest, and a small active volcano; safe harbor on Yellow Leaf Bay.")}
+    ${card("Culture & Growth","Indigenous population ~20,000; economy historically fishing/agriculture; tourism is growing.")}
+    ${card("Where to Go","Most visitors stay in Taniti City (native architecture, white-sand beaches around Yellow Leaf Bay). Merriton Landing on the north side is a developing hub for dining and activities.")}
+    ${card("Things to Do","Museum, charter fishing, snorkeling, zip-lining, pubs/microbrewery, dance club, movies, helicopter rides, arcade, galleries, bowling; nine-hole golf course slated for next year.")}`;
+}
+
+function contactView(){
+  return `<h2 style='font-size:20px;font-weight:600'>Contact</h2>
+    ${card("Tourism Office","Email: info@visittaniti.example • Hours: 9–5 (Mon–Fri)")}
+    ${card("Emergency","Local emergency services available; hotel desks can assist.")}`;
+}
+
+function render(){
+  nav();
+  const c = document.getElementById('content');
+  if(current==="Home") c.innerHTML = homeView();
+  else if(current==="Activities") c.innerHTML = activitiesView();
+  else if(current==="Stay") c.innerHTML = stayView();
+  else if(current==="Eat & Drink") c.innerHTML = eatView();
+  else if(current==="Getting Around") c.innerHTML = aroundView();
+  else if(current==="Plan & Book") c.innerHTML = planView();
+  else if(current==="Travel Info") c.innerHTML = infoView();
+  else if(current==="About") c.innerHTML = aboutView();
+  else if(current==="Contact") c.innerHTML = contactView();
+}
+render();
+</script>
+</body>
+</html>
